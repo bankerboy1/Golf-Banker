@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BANKER — Golf Side Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold: #d4af37; --gold-dim: rgba(212,175,55,0.15); --gold-border: rgba(212,175,55,0.25);
+  --pos: #4ade80; --neg: #f87171; --bg: #0a1a0f; --bg2: #0f2318;
+  --surface: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.1);
+  --text: #e8e0d0; --muted: #888;
+  --fd: 'Playfair Display', Georgia, serif; --fb: 'Lato', Georgia, serif;
+}
+html,body { min-height:100vh; background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 50%,var(--bg) 100%); color:var(--text); font-family:var(--fb); -webkit-font-smoothing:antialiased; }
+#app { display:flex; justify-content:center; padding:20px 14px 80px; min-height:100vh; }
+.wrap { width:100%; max-width:520px; }
+.card { background:var(--surface); border:1px solid var(--gold-border); border-radius:16px; padding:24px 20px; }
+
+/* NAV BAR */
+.navbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 0 16px;
+}
+.nav-home {
+  background:none; border:none; color:var(--gold); font-size:24px; cursor:pointer; padding:4px;
+}
+.nav-title { font-family:var(--fd); font-size:18px; color:var(--gold); letter-spacing:3px; }
+.nav-back {
+  background:none; border:1px solid rgba(255,255,255,0.15); border-radius:8px;
+  color:#ccc; font-size:13px; cursor:pointer; padding:6px 12px; font-family:var(--fb);
+}
+.nav-back:hover { border-color:var(--gold); color:var(--gold); }
+
+/* LOGO */
+.logo-row { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
+.logo-text { font-family:var(--fd); font-size:46px; font-weight:900; letter-spacing:10px; color:var(--gold); line-height:1; }
+.logo-sub { color:var(--muted); font-size:11px; letter-spacing:3px; text-transform:uppercase; margin-bottom:24px; margin-top:2px; }
+
+/* SECTIONS */
+.sec { margin-bottom:22px; }
+.sec-label { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
+
+/* PILLS */
+.pills { display:flex; flex-wrap:wrap; gap:8px; }
+.pill,.pill-on { padding:8px 16px; border-radius:20px; font-family:var(--fb); font-size:13px; cursor:pointer; transition:all 0.15s; }
+.pill { border:1px solid rgba(255,255,255,0.15); background:transparent; color:#ccc; }
+.pill:hover { border-color:var(--gold); color:var(--gold); }
+.pill-on { border:1px solid var(--gold); background:var(--gold-dim); color:var(--gold); }
+
+/* INPUTS */
+input[type=text],input[type=number],input[type=password] {
+  background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:8px;
+  padding:9px 13px; color:var(--text); font-family:var(--fb); font-size:14px; outline:none; width:100%; transition:border-color 0.15s;
+}
+input:focus { border-color:rgba(212,175,55,0.5); }
+.player-row { display:flex; gap:8px; margin-bottom:8px; }
+.player-row input:first-child { flex:2; }
+.player-row input:last-child { flex:1; text-align:center; }
+
+/* COURSE */
+.course-search-row { display:flex; gap:8px; margin-bottom:6px; }
+.course-search-row input { flex:1; }
+.search-btn { padding:9px 16px; background:var(--gold-dim); border:1px solid rgba(212,175,55,0.4); border-radius:8px; color:var(--gold); cursor:pointer; font-family:var(--fb); font-size:13px; white-space:nowrap; transition:background 0.15s; }
+.search-btn:hover { background:rgba(212,175,55,0.25); }
+.search-btn:disabled { opacity:0.5; cursor:not-allowed; }
+.course-hint { font-size:11px; color:#555; margin-bottom:8px; }
+.course-error { color:var(--neg); font-size:12px; margin:6px 0; }
+.course-list { display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; margin-top:8px; }
+.course-item { display:flex; flex-direction:column; align-items:flex-start; padding:10px 14px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-family:var(--fb); font-size:13px; gap:2px; text-align:left; width:100%; transition:border-color 0.15s; }
+.course-item:hover { border-color:var(--gold); }
+.course-item .ci-name { font-weight:700; color:var(--text); }
+.course-item .ci-loc { color:var(--muted); font-size:12px; }
+.course-selected { display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--pos); background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.2); padding:10px 14px; border-radius:8px; }
+.clear-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; }
+.text-btn { background:none; border:none; color:var(--gold); cursor:pointer; font-size:11px; letter-spacing:1px; text-transform:uppercase; font-family:var(--fb); }
+
+/* PAR GRID */
+.par-grid { display:grid; grid-template-columns:repeat(9,1fr); gap:4px; }
+.par-cell { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.par-hole-num { font-size:9px; color:#666; }
+.par-val { font-size:15px; font-weight:700; }
+.par-val.p3 { color:#60a5fa; } .par-val.p4 { color:var(--text); } .par-val.p5 { color:#f87171; }
+.par-input { width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:13px; text-align:center; padding:4px 0; outline:none; }
+
+/* BUTTONS */
+.start-btn { width:100%; padding:14px; background:linear-gradient(135deg,#d4af37,#a07c20); border:none; border-radius:10px; color:#0a1a0f; font-size:16px; font-weight:700; letter-spacing:3px; cursor:pointer; font-family:var(--fd); margin-top:10px; transition:opacity 0.15s; }
+.start-btn:hover { opacity:0.9; }
+.action-btn { width:100%; margin-top:16px; padding:13px; background:linear-gradient(135deg,#d4af37,#a07c20); border:none; border-radius:10px; color:#0a1a0f; font-size:15px; font-weight:700; letter-spacing:2px; cursor:pointer; font-family:var(--fd); transition:opacity 0.15s; }
+.action-btn:hover { opacity:0.9; }
+.action-btn:disabled { background:#333; color:#666; cursor:not-allowed; opacity:1; }
+
+/* GAME HEADER */
+.game-header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:rgba(212,175,55,0.08); border-radius:12px 12px 0 0; border:1px solid var(--gold-border); border-bottom:none; }
+.hole-num { font-family:var(--fd); font-size:24px; font-weight:700; color:var(--gold); letter-spacing:2px; }
+.forc-badge { font-size:9px; letter-spacing:2px; background:#7f1d1d; color:#fca5a5; padding:3px 8px; border-radius:4px; text-transform:uppercase; margin-left:10px; }
+.header-right { display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
+.par-label { font-size:13px; color:var(--muted); }
+.bet-label { font-size:14px; color:var(--gold); font-weight:700; }
+
+/* TOTALS STRIP */
+.totals-strip { display:flex; border:1px solid var(--gold-border); border-top:none; border-bottom:none; }
+.total-chip { flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 6px; background:rgba(255,255,255,0.03); border-right:1px solid rgba(255,255,255,0.06); }
+.total-chip:last-child { border-right:none; }
+.t-name { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+.t-amt { font-size:16px; font-weight:700; margin-top:2px; }
+.pos { color:var(--pos); } .neg { color:var(--neg); }
+
+/* PHASE BOX */
+.phase-box { background:var(--surface); border:1px solid var(--gold-border); border-top:none; border-radius:0 0 12px 12px; padding:20px 18px; }
+.phase-title { font-family:var(--fd); font-size:20px; color:var(--gold); margin-bottom:6px; }
+.phase-desc { font-size:13px; color:#999; margin-bottom:16px; line-height:1.5; }
+.info-box { background:rgba(0,0,0,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; border-left:3px solid rgba(212,175,55,0.4); }
+.info-row { display:flex; justify-content:space-between; padding:4px 0; font-size:13px; }
+.rule-note { font-size:11px; color:var(--gold); background:rgba(212,175,55,0.08); padding:8px 12px; border-radius:6px; margin-bottom:14px; line-height:1.5; }
+
+/* BANKER GRID */
+.banker-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+.banker-grid-5 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:12px; }
+.banker-btn { padding:16px 10px; background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.3); border-radius:10px; color:var(--gold); font-family:var(--fd); font-size:16px; cursor:pointer; transition:background 0.15s; }
+.banker-btn:hover { background:rgba(212,175,55,0.18); }
+
+/* BET ROW */
+.g-bet-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.g-bet-row.banker-row { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); }
+.bet-name { min-width:72px; font-size:13px; color:#ccc; font-weight:700; }
+.bet-btn,.bet-btn-on { flex:1; padding:9px 4px; border-radius:8px; font-size:12px; cursor:pointer; text-align:center; font-family:var(--fb); line-height:1.4; transition:all 0.12s; }
+.bet-btn { background:rgba(255,255,255,0.04); border:1px solid var(--border); color:#aaa; }
+.bet-btn:hover { border-color:rgba(212,175,55,0.4); color:#ccc; }
+.bet-btn-on { background:var(--gold-dim); border:1px solid var(--gold); color:var(--gold); }
+.preview { margin-top:14px; padding:10px 14px; background:rgba(0,0,0,0.2); border-radius:8px; border-left:3px solid var(--gold); }
+.preview-row { display:flex; justify-content:space-between; font-size:13px; padding:3px 0; color:#bbb; }
+.preview-amt { color:var(--gold); font-weight:700; }
+.preview-note { color:#555; font-weight:400; font-size:11px; }
+
+/* STEPPER */
+.stepper-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+.stepper-row:last-of-type { border-bottom:none; }
+.stepper-name { font-size:15px; color:#ccc; font-weight:600; flex:1; }
+.stepper-ctrl { display:flex; align-items:center; gap:0; }
+.stepper-btn { width:52px; height:52px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:var(--gold); font-size:28px; cursor:pointer; line-height:1; transition:background 0.12s; font-family:var(--fb); display:flex; align-items:center; justify-content:center; }
+.stepper-btn:hover { background:rgba(212,175,55,0.15); }
+.stepper-btn:active { background:rgba(212,175,55,0.25); transform:scale(0.95); }
+.stepper-val { display:flex; flex-direction:column; align-items:center; min-width:80px; gap:2px; }
+.stepper-num { font-family:var(--fd); font-size:32px; font-weight:700; color:var(--text); line-height:1; }
+.stepper-label { font-size:11px; letter-spacing:1px; text-transform:uppercase; }
+
+/* RESULT */
+.result-hole { padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+.result-hole:last-of-type { border-bottom:none; }
+.result-matchup { display:flex; flex-wrap:wrap; gap:8px; font-size:13px; color:#ccc; margin-bottom:6px; }
+.result-matchup strong { color:#fff; }
+.result-matchup .vs { color:#444; }
+.result-bottom { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.result-win { font-weight:700; font-size:16px; }
+.result-tied { color:#888; font-weight:600; }
+.tag { font-size:10px; padding:2px 7px; border-radius:4px; letter-spacing:1px; background:rgba(255,255,255,0.08); color:#aaa; }
+.tag-gold { background:rgba(212,175,55,0.2); color:var(--gold); }
+.after-totals { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+.after-chip { flex:1; min-width:80px; display:flex; flex-direction:column; align-items:center; padding:10px 8px; background:rgba(255,255,255,0.04); border-radius:8px; border:1px solid rgba(255,255,255,0.08); gap:3px; }
+.after-name { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+.after-amt { font-size:17px; font-weight:700; }
+
+/* HOLE SELECTOR (back nav) */
+.hole-selector { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+
+/* HOLE REVIEW PANEL */
+.review-panel { background:var(--surface); border:1px solid var(--gold-border); border-radius:12px; padding:16px 18px; margin-bottom:12px; }
+.review-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.review-title { font-family:var(--fd); font-size:16px; color:var(--gold); }
+.review-close { background:none; border:none; color:var(--muted); cursor:pointer; font-size:20px; line-height:1; }
+.hole-slider-wrap { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.hole-slider { flex:1; -webkit-appearance:none; appearance:none; height:4px; border-radius:2px; outline:none;
+  background: linear-gradient(to right, var(--gold) 0%, var(--gold) var(--pct,0%), rgba(255,255,255,0.1) var(--pct,0%), rgba(255,255,255,0.1) 100%); }
+.hole-slider::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:var(--gold); cursor:pointer; border:3px solid #0a1a0f; box-shadow:0 0 6px rgba(212,175,55,0.5); }
+.hole-slider::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:var(--gold); cursor:pointer; border:3px solid #0a1a0f; }
+.slider-hole-num { font-family:var(--fd); font-size:22px; font-weight:700; color:var(--gold); min-width:36px; text-align:center; }
+.review-hole-card { background:rgba(0,0,0,0.2); border-radius:10px; padding:14px; }
+.review-hole-meta { font-size:11px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; }
+.review-matchup { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13px; }
+.review-matchup:last-child { border-bottom:none; }
+.review-player { color:#ccc; }
+.review-amount { font-weight:700; font-size:15px; }
+.review-tags { display:flex; gap:4px; margin-top:4px; flex-wrap:wrap; }
+.review-totals { display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
+.review-total-chip { flex:1; min-width:60px; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.04); border-radius:8px; border:1px solid rgba(255,255,255,0.08); }
+.review-total-name { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; display:block; }
+.review-total-amt { font-size:15px; font-weight:700; display:block; margin-top:2px; }
+.no-review-data { text-align:center; color:var(--muted); padding:20px 0; font-size:13px; }
+.hole-dot { width:36px; height:36px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:#ccc; transition:all 0.12s; }
+.hole-dot.played { background:var(--gold-dim); border-color:var(--gold); color:var(--gold); }
+.hole-dot.current { background:var(--gold); border-color:var(--gold); color:#0a1a0f; }
+.hole-dot:hover { border-color:var(--gold); }
+
+/* SUMMARY */
+.summary-title { font-family:var(--fd); font-size:28px; color:var(--gold); letter-spacing:4px; text-align:center; margin-bottom:20px; }
+.summary-row { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:10px; margin-bottom:8px; }
+.summary-rank { font-size:22px; min-width:38px; }
+.summary-name { flex:1; font-size:17px; font-weight:700; }
+.summary-total { font-size:22px; font-weight:700; }
+.scorecard-title { font-size:11px; letter-spacing:3px; color:var(--gold); text-transform:uppercase; margin:24px 0 10px; }
+.scorecard-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.1); color:var(--muted); text-align:center; }
+td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:center; color:#ccc; }
+
+/* HOME SCREEN */
+.home-hero { text-align:center; padding:20px 0 30px; }
+.home-btn { width:100%; padding:16px; background:linear-gradient(135deg,#d4af37,#a07c20); border:none; border-radius:12px; color:#0a1a0f; font-size:17px; font-weight:700; letter-spacing:3px; cursor:pointer; font-family:var(--fd); margin-bottom:12px; }
+.home-btn:hover { opacity:0.9; }
+.home-section-title { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); margin:24px 0 12px; }
+.game-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; margin-bottom:10px; cursor:pointer; transition:border-color 0.15s; }
+.game-card:hover { border-color:var(--gold); }
+.game-card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+.game-card-course { font-size:15px; font-weight:700; color:var(--text); }
+.game-card-date { font-size:12px; color:var(--muted); }
+.game-card-players { display:flex; gap:8px; flex-wrap:wrap; }
+.game-player-chip { font-size:12px; padding:3px 10px; border-radius:12px; }
+.gpc-pos { background:rgba(74,222,128,0.1); color:var(--pos); border:1px solid rgba(74,222,128,0.2); }
+.gpc-neg { background:rgba(248,113,113,0.1); color:var(--neg); border:1px solid rgba(248,113,113,0.2); }
+.gpc-neutral { background:rgba(255,255,255,0.06); color:#aaa; border:1px solid rgba(255,255,255,0.1); }
+.active-badge { font-size:9px; letter-spacing:2px; background:rgba(74,222,128,0.15); color:var(--pos); padding:3px 8px; border-radius:4px; text-transform:uppercase; }
+.no-games { text-align:center; color:var(--muted); font-size:14px; padding:24px 0; }
+
+/* HISTORY DETAIL */
+.history-hole-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13px; }
+.history-hole-num { width:28px; color:var(--muted); font-size:12px; }
+.history-banker { color:var(--gold); font-size:11px; min-width:60px; }
+.history-deltas { display:flex; gap:6px; flex-wrap:wrap; flex:1; justify-content:flex-end; }
+
+/* FORECLOSURE */
+.forc-bet-opts { display:flex; gap:8px; flex-wrap:wrap; }
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(212,175,55,0.3); border-radius:2px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const GCAPI_KEY = "ZSF2IKVMZOLS2UJXFBY2B657QE";
+const TOTAL_HOLES = 18;
+const FORECLOSURE_START = 16;
+const DEFAULT_PARS = [4,4,3,4,5,4,3,4,5,4,4,3,4,5,4,3,4,5];
+const DEFAULT_SI   = [1,3,5,7,9,11,13,15,17,2,4,6,8,10,12,14,16,18];
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let state = {
+  screen: 'home',   // home | setup | game | summary | history-detail
+  phase: 'pick-banker',
+  numPlayers: 4,
+  players: [{name:'Player 1',handicap:0},{name:'Player 2',handicap:0},{name:'Player 3',handicap:0},{name:'Player 4',handicap:0},{name:'Player 5',handicap:0}],
+  baseBet: 5,
+  scoringMode: 'gross',
+  pars: [...DEFAULT_PARS],
+  si: [...DEFAULT_SI],
+  selectedCourse: null,
+  editPars: false,
+  courseSearch: '', courseResults: [], courseSearching: false, courseError: '',
+  // game
+  startingHole: 1,
+  currentHole: 1,
+  bankerIdx: null,
+  totals: [0,0,0,0,0],
+  holeScores: [],   // completed holes
+  currentScores: ['4','4','4','4'],
+  bets: [{type:null},{type:null},{type:null},{type:null}],
+  bankerBet: null,
+  holeResult: null,
+  foreclosureBet: null,
+  foreclosureSetup: false,
+  showHoleNav: false,
+  reviewHole: null,
+  editingHole: null,
+  // saved games (session only — cloud later)
+  savedGames: [],   // { id, date, course, players, numPlayers, totals, holeScores, pars, complete }
+  viewingGameId: null,
+  activeGameId: null,
+};
+
+function setState(patch) { Object.assign(state, patch); render(); }
+function ap() { return state.players.slice(0, state.numPlayers); }
+function curPar() { return state.pars[state.currentHole - 1]; }
+function curBase() {
+  if (state.currentHole >= FORECLOSURE_START && state.foreclosureBet !== null) return state.foreclosureBet;
+  return state.baseBet;
+}
+function calcNet(gross, hcp, holeIdx) {
+  const rank = state.si[holeIdx];
+  const strokes = Math.floor(hcp/18) + (rank <= (hcp%18) ? 1 : 0);
+  return gross - strokes;
+}
+function scoreMult(score, par) {
+  const d = score - par;
+  if (d <= -2) return 3; if (d === -1) return 2; return 1;
+}
+function scoreLabel(score, par) {
+  const d = score - par;
+  if (d <= -3) return 'Albatross 🦅'; if (d === -2) return 'Eagle 🦅'; if (d === -1) return 'Birdie 🐦';
+  if (d === 0) return 'Par'; if (d === 1) return 'Bogey'; if (d === 2) return 'Double'; return `+${d}`;
+}
+function scoreColor(score, par) {
+  const d = score - par;
+  if (d <= -2) return '#fbbf24'; if (d === -1) return '#4ade80'; if (d === 0) return '#94a3b8'; return '#f87171';
+}
+function fmt(n) {
+  if (n >= 0) return '+$' + n.toFixed(0);
+  return '-$' + Math.abs(n).toFixed(0);
+}
+function pMult(idx) {
+  const b = state.bets[idx]; const par = curPar();
+  if (!b || !b.type) return 1;
+  if (b.type === 'pre') return par === 3 ? 5 : 4;
+  if (b.type === 'post') return par === 3 ? 3 : 2;
+  return 1;
+}
+function bMult() {
+  const par = curPar();
+  if (!state.bankerBet) return 1;
+  if (state.bankerBet === 'pre') return par === 3 ? 5 : 4;
+  if (state.bankerBet === 'double') return par === 3 ? 3 : 2;
+  return 1;
+}
+function forcOrder() {
+  return state.totals.slice(0,state.numPlayers).map((t,i)=>({i,t})).sort((a,b)=>a.t-b.t);
+}
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+// ── COURSE API ─────────────────────────────────────────────────────────────
+async function searchCourse() {
+  if (!state.courseSearch.trim()) return;
+  setState({courseSearching:true, courseError:'', courseResults:[]});
+  try {
+    const res = await fetch(`https://api.golfcourseapi.com/v1/search?search_query=${encodeURIComponent(state.courseSearch)}`,
+      {headers:{'Authorization':`Key ${GCAPI_KEY}`}});
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    const results = data.courses || [];
+    setState({courseSearching:false, courseResults:results, courseError: results.length?'':'No courses found. Try a different name.'});
+  } catch(e) {
+    setState({courseSearching:false, courseError:'Search failed. Check your connection.'});
+  }
+}
+async function loadCourse(courseId) {
+  setState({courseSearching:true, courseError:''});
+  try {
+    const res = await fetch(`https://api.golfcourseapi.com/v1/courses/${courseId}`,
+      {headers:{'Authorization':`Key ${GCAPI_KEY}`}});
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const course = data.course;
+    const tee = course.tees?.male?.[0] || course.tees?.female?.[0];
+    if (tee && tee.holes && tee.holes.length === 18) {
+      setState({
+        pars: tee.holes.map(h=>h.par||4),
+        si: tee.holes.map(h=>h.handicap||h.hole_number),
+        selectedCourse: course.club_name + (course.course_name?` — ${course.course_name}`:''),
+        courseSearching:false, courseResults:[], courseSearch:'', courseError:'',
+      });
+    } else {
+      setState({courseSearching:false, courseError:'Par data unavailable for this course.'});
+    }
+  } catch(e) {
+    setState({courseSearching:false, courseError:'Failed to load course. Try again.'});
+  }
+}
+
+// ── GAME ACTIONS ───────────────────────────────────────────────────────────
+function startGame() {
+  const gameId = Date.now().toString();
+  const sh = state.startingHole || 1;
+  const initScores = String(state.pars[sh-1]);
+  const newGame = {
+    id: gameId,
+    date: Date.now(),
+    course: state.selectedCourse || 'Custom Course',
+    players: state.players.map(p=>({...p})),
+    numPlayers: state.numPlayers,
+    totals: [0,0,0,0],
+    holeScores: [],
+    pars: [...state.pars],
+    complete: false,
+  };
+  setState({
+    screen:'game', phase:'pick-banker',
+    currentHole:sh, bankerIdx:null,
+    totals:[0,0,0,0,0], holeScores:[],
+    currentScores:[initScores,initScores,initScores,initScores,initScores],
+    bets:[{type:null},{type:null},{type:null},{type:null},{type:null}],
+    bankerBet:null, holeResult:null,
+    foreclosureBet:null, foreclosureSetup:false, showHoleNav:false,
+    savedGames:[...state.savedGames, newGame],
+    activeGameId: gameId,
+  });
+}
+
+function resetHole() {
+  const p = String(state.pars[state.currentHole - 1] || 4);
+  state.currentScores = [p,p,p,p];
+  state.bets = [{type:null},{type:null},{type:null},{type:null}];
+  state.bankerBet = null;
+  state.holeResult = null;
+  state.showHoleNav = false;
+}
+
+function calcDetails(bi, par, base) {
+  // Pure function: calculate hole details from current scores/bets
+  // Returns {details} with correct deltas — does NOT touch state.totals
+  const details = [];
+  ap().forEach((_,idx) => {
+    if (idx === bi) return;
+    const pGross = parseInt(state.currentScores[idx]);
+    const bGross = parseInt(state.currentScores[bi]);
+    if (isNaN(pGross)||isNaN(bGross)) return;
+    const pScore = state.scoringMode==='net' ? calcNet(pGross, state.players[idx].handicap||0, state.currentHole-1) : pGross;
+    const bScore = state.scoringMode==='net' ? calcNet(bGross, state.players[bi].handicap||0, state.currentHole-1) : bGross;
+    const pm = pMult(idx); const bm = bMult();
+    const winnerGross = (pScore < bScore) ? pGross : (bScore < pScore) ? bGross : null;
+    const wm = winnerGross !== null ? scoreMult(winnerGross, par) : 1;
+    const amount = base * pm * bm * wm;
+    const tie = pScore === bScore;
+    const playerWins = pScore < bScore;
+    const delta = tie ? 0 : (playerWins ? amount : -amount);
+    details.push({playerIdx:idx, pGross, bGross, pScore, bScore, amount, tie, playerWins, delta,
+      betType: state.bets[idx].type, bankerBet: state.bankerBet});
+  });
+  return details;
+}
+
+function rebuildTotals() {
+  // Recalculate all totals and totalsAfter from scratch
+  const running = [0,0,0,0,0];
+  state.holeScores.forEach(h => {
+    h.details.forEach(d => {
+      running[d.playerIdx] += d.delta;
+      running[h.bankerIdx] -= d.delta;
+    });
+    h.totalsAfter = [...running];
+  });
+  state.totals = [...running];
+}
+
+function submitScores() {
+  const par = curPar();
+  const base = curBase();
+  const bi = state.bankerIdx;
+  const details = calcDetails(bi, par, base);
+
+  const holeEntry = {
+    hole: state.currentHole, bankerIdx: bi, details,
+    scores: [...state.currentScores],
+    bets: state.bets.map(b=>({...b})),
+    bankerBet: state.bankerBet,
+    totalsAfter: [], // filled by rebuildTotals
+    par, base,
+  };
+
+  if (state.editingHole) {
+    // Replace existing entry and rebuild everything
+    state.holeScores = state.holeScores.map(h => h.hole === state.editingHole ? holeEntry : h);
+    rebuildTotals();
+    state.holeResult = {hole: state.editingHole, bankerIdx: bi, details, par, editMode: true};
+    state.editingHole = null;
+    // currentHole stays as the edited hole — nextHole() will return to the right place
+  } else {
+    state.holeScores = [...state.holeScores, holeEntry];
+    rebuildTotals();
+    state.holeResult = {hole: state.currentHole, bankerIdx: bi, details, par};
+  }
+
+  updateSavedGame();
+  state.phase = 'result';
+  render();
+}
+
+function updateSavedGame() {
+  state.savedGames = state.savedGames.map(g => {
+    if (g.id !== state.activeGameId) return g;
+    return {...g, totals:[...state.totals], holeScores:[...state.holeScores]};
+  });
+}
+
+function nextHole() {
+  // After an edit, jump back to the last unplayed hole (not currentHole+1)
+  const playedHoles = state.holeScores.map(h => h.hole);
+  const lastPlayed = playedHoles.length ? Math.max(...playedHoles) : 0;
+  const next = lastPlayed >= TOTAL_HOLES ? TOTAL_HOLES : lastPlayed + 1;
+
+  if (lastPlayed >= TOTAL_HOLES) {
+    state.savedGames = state.savedGames.map(g => {
+      if (g.id !== state.activeGameId) return g;
+      return {...g, complete:true, totals:[...state.totals], holeScores:[...state.holeScores]};
+    });
+    setState({screen:'summary'});
+    return;
+  }
+
+  state.currentHole = next;
+  resetHole();
+  if (next >= FORECLOSURE_START && !state.foreclosureSetup) {
+    state.foreclosureSetup = true;
+    state.phase = 'foreclosure-setup';
+  } else {
+    state.phase = 'pick-banker';
+    state.bankerIdx = null;
+  }
+  render();
+}
+
+// ── BACK TO HOLE ───────────────────────────────────────────────────────────
+function goToHole(holeNum) {
+  // Rewind state to before that hole was played
+  const prevScores = state.holeScores.filter(h => h.hole < holeNum);
+  // Recalculate totals up to that point
+  const newTotals = [0,0,0,0];
+  prevScores.forEach(h => {
+    h.details.forEach(d => {
+      newTotals[d.playerIdx] += d.delta;
+      newTotals[h.bankerIdx] -= d.delta;
+    });
+  });
+  state.holeScores = prevScores;
+  state.totals = newTotals;
+  state.currentHole = holeNum;
+  state.foreclosureSetup = prevScores.some(h => h.hole >= FORECLOSURE_START);
+  state.foreclosureBet = prevScores.find(h => h.hole >= FORECLOSURE_START)?.base || null;
+  updateSavedGame();
+  resetHole();
+  state.phase = 'pick-banker';
+  state.bankerIdx = null;
+  render();
+}
+
+
+function editHole(holeNum) {
+  // Load existing hole data without deleting anything
+  const existing = state.holeScores.find(h => h.hole === holeNum);
+  if (!existing) { goToHole(holeNum); return; }
+
+  // Set current hole to the one being edited
+  state.currentHole = holeNum;
+  state.showHoleNav = false;
+
+  // Pre-fill scores, bets, banker from existing data
+  state.currentScores = [...existing.scores];
+  state.bets = existing.bets.map(b => ({...b}));
+  state.bankerBet = existing.bankerBet;
+  state.bankerIdx = existing.bankerIdx;
+  state.foreclosureBet = existing.base !== state.baseBet ? existing.base : state.foreclosureBet;
+
+  // Set editing flag so submitScores knows to patch instead of append
+  state.editingHole = holeNum;
+  state.phase = 'scores';
+  render();
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  if (state.screen === 'home') app.innerHTML = renderHome();
+  else if (state.screen === 'setup') app.innerHTML = renderSetup();
+  else if (state.screen === 'game') app.innerHTML = renderGame();
+  else if (state.screen === 'summary') app.innerHTML = renderSummary();
+  else if (state.screen === 'history-detail') app.innerHTML = renderHistoryDetail();
+  bindEvents();
+}
+
+// ── HOME ───────────────────────────────────────────────────────────────────
+function renderHome() {
+  const activeGames = state.savedGames.filter(g => !g.complete);
+  const doneGames = state.savedGames.filter(g => g.complete);
+
+  return `
+  <div class="wrap">
+    <div class="home-hero">
+      <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" style="width:140px;height:140px;margin:0 auto 10px;display:block">
+        <defs>
+          <linearGradient id="gGold" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#f5e070"/>
+            <stop offset="50%" style="stop-color:#d4af37"/>
+            <stop offset="100%" style="stop-color:#9a7310"/>
+          </linearGradient>
+          <linearGradient id="gWall" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#2a4a2a"/>
+            <stop offset="100%" style="stop-color:#1a2e1a"/>
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- BANK BUILDING -->
+        <!-- Main body -->
+        <rect x="20" y="80" width="120" height="68" fill="url(#gWall)" rx="2"/>
+        <!-- Columns (6) -->
+        <rect x="24" y="72" width="10" height="76" fill="url(#gGold)" rx="2" opacity="0.9"/>
+        <rect x="42" y="72" width="10" height="76" fill="url(#gGold)" rx="2" opacity="0.9"/>
+        <rect x="60" y="72" width="10" height="76" fill="url(#gGold)" rx="2" opacity="0.9"/>
+        <rect x="78" y="72" width="10" height="76" fill="url(#gGold)" rx="2" opacity="0.9"/>
+        <rect x="96" y="72" width="10" height="76" fill="url(#gGold)" rx="2" opacity="0.9"/>
+        <rect x="114" y="72" width="10" height="76" fill="url(#gGold)" rx="2" opacity="0.9"/>
+        <rect x="126" y="72" width="10" height="76" fill="url(#gGold)" rx="2" opacity="0.9"/>
+        <!-- Entablature (top beam) -->
+        <rect x="16" y="66" width="128" height="10" fill="url(#gGold)" rx="1"/>
+        <!-- Pediment (triangle roof) -->
+        <polygon points="80,40 14,66 146,66" fill="url(#gGold)"/>
+        <!-- Base steps -->
+        <rect x="12" y="148" width="136" height="6" fill="url(#gGold)" rx="1" opacity="0.9"/>
+        <rect x="6" y="154" width="148" height="6" fill="url(#gGold)" rx="1" opacity="0.7"/>
+        <!-- Door -->
+        <rect x="67" y="110" width="26" height="38" fill="#0a1a0f" rx="3" opacity="0.9"/>
+        <rect x="69" y="112" width="10" height="34" fill="rgba(212,175,55,0.08)" rx="2"/>
+        <rect x="81" y="112" width="10" height="34" fill="rgba(212,175,55,0.08)" rx="2"/>
+
+        <!-- FLAG POLE on pediment peak -->
+        <line x1="80" y1="40" x2="80" y2="6" stroke="url(#gGold)" stroke-width="2.5" stroke-linecap="round" filter="url(#glow)"/>
+        <!-- FLAG waving right -->
+        <path d="M80,6 Q100,11 98,17 Q96,22 80,22 Z" fill="#d4af37" filter="url(#glow)"/>
+        <!-- Flag shine -->
+        <path d="M80,6 Q92,10 91,14" stroke="rgba(255,240,150,0.5)" stroke-width="1" fill="none"/>
+      </svg>
+      <p class="logo-text" style="text-align:center;margin-bottom:4px">BANKER</p>
+      <p class="logo-sub" style="margin-bottom:0;text-align:center">Where birdies pay and bogeys bleed.</p>
+    </div>
+
+    <button class="home-btn" data-action="goSetup">NEW GAME</button>
+
+    ${activeGames.length ? `
+      <p class="home-section-title">Active Game${activeGames.length>1?'s':''}</p>
+      ${activeGames.map(g => renderGameCard(g, true)).join('')}
+    ` : ''}
+
+    ${doneGames.length ? `
+      <p class="home-section-title">Past Games</p>
+      ${doneGames.slice().reverse().map(g => renderGameCard(g, false)).join('')}
+    ` : `
+      ${!activeGames.length ? `<p class="no-games">No games yet.<br>Tap New Game to get started.</p>` : ''}
+    `}
+  </div>`;
+}
+
+function renderGameCard(g, isActive) {
+  const players = g.players.slice(0, g.numPlayers);
+  const sorted = players.map((p,i)=>({...p,total:g.totals[i]||0,i})).sort((a,b)=>b.total-a.total);
+  const hole = g.holeScores.length;
+  return `
+  <div class="game-card" data-action="${isActive?'resumeGame':'viewHistory'}" data-id="${g.id}">
+    <div class="game-card-top">
+      <div>
+        <div class="game-card-course">${g.course}</div>
+        <div class="game-card-date">${fmtDate(g.date)} ${isActive?`· Thru ${hole===0?'Setup':'Hole '+hole}`:`· 18 holes`}</div>
+      </div>
+      ${isActive ? `<span class="active-badge">IN PROGRESS</span>` : ''}
+    </div>
+    <div class="game-card-players">
+      ${sorted.map(p=>`
+        <span class="game-player-chip ${p.total>0?'gpc-pos':p.total<0?'gpc-neg':'gpc-neutral'}">
+          ${p.name||'P'+(p.i+1)} ${fmt(p.total)}
+        </span>
+      `).join('')}
+    </div>
+  </div>`;
+}
+
+// ── SETUP ──────────────────────────────────────────────────────────────────
+function renderSetup() {
+  const players = ap();
+  return `
+  <div class="wrap">
+    <div class="navbar">
+      <button class="nav-home" data-action="goHome">⌂</button>
+      <span class="nav-title">NEW GAME</span>
+      <div style="width:60px"></div>
+    </div>
+    <div class="card">
+      <div class="sec">
+        <div class="sec-label">Number of Players</div>
+        <div class="pills">
+          ${[2,3,4,5].map(n=>`<button class="pill${state.numPlayers===n?' pill-on':''}" data-action="setNumPlayers" data-val="${n}">${n} Players</button>`).join('')}
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-label">Player Names &amp; Handicaps</div>
+        ${players.map((p,i)=>`
+          <div class="player-row">
+            <input type="text" placeholder="Player ${i+1}" value="${p.name}" data-action="setPlayerName" data-idx="${i}" />
+            <input type="number" placeholder="HCP" min="0" max="54" value="${p.handicap}" data-action="setPlayerHcp" data-idx="${i}" />
+          </div>
+        `).join('')}
+      </div>
+      <div class="sec">
+        <div class="sec-label">Base Bet ($ per hole)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          ${['1','2','5','10','20'].map(v=>`<button class="pill${state.baseBet==v?' pill-on':''}" data-action="setBaseBet" data-val="${v}">$${v}</button>`).join('')}
+          <input type="number" min="1" placeholder="Other" value="${state.baseBet}" data-action="setBaseBetInput" style="width:72px;text-align:center" />
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-label">Scoring Mode</div>
+        <div class="pills">
+          <button class="pill${state.scoringMode==='gross'?' pill-on':''}" data-action="setScoringMode" data-val="gross">Gross</button>
+          <button class="pill${state.scoringMode==='net'?' pill-on':''}" data-action="setScoringMode" data-val="net">Net (Handicap)</button>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-label">Select Your Course</div>
+        ${state.selectedCourse ? `
+          <div class="course-selected">
+            <span>✅ ${state.selectedCourse}</span>
+            <button class="clear-btn" data-action="clearCourse">✕ Clear</button>
+          </div>
+        ` : `
+          <div class="course-search-row">
+            <input type="text" placeholder="Search course name..." value="${state.courseSearch}" data-action="setCourseSearch" />
+            <button class="search-btn" data-action="searchCourse" ${state.courseSearching||!state.courseSearch.trim()?'disabled':''}>
+              ${state.courseSearching ? '⏳' : 'Search'}
+            </button>
+          </div>
+          <p class="course-hint">Or edit pars manually below.</p>
+          ${state.courseError ? `<p class="course-error">${state.courseError}</p>` : ''}
+          ${state.courseResults.length ? `
+            <div class="course-list">
+              ${state.courseResults.slice(0,8).map(c=>`
+                <button class="course-item" data-action="loadCourse" data-id="${c.id}" ${state.courseSearching?'disabled':''}>
+                  <span class="ci-name">${c.club_name}</span>
+                  <span class="ci-loc">${[c.location?.city,c.location?.state].filter(Boolean).join(', ')}</span>
+                </button>
+              `).join('')}
+            </div>
+          ` : ''}
+        `}
+      </div>
+      <div class="sec">
+        <div class="sec-label">
+          <span>Par Values ${state.selectedCourse?'<span style="color:#4ade80;font-size:9px">● FROM COURSE</span>':''}</span>
+          <button class="text-btn" data-action="toggleEditPars">${state.editPars?'Done':'Edit'}</button>
+        </div>
+        ${state.editPars ? `
+          <div class="par-grid">
+            ${state.pars.map((p,i)=>`
+              <div class="par-cell">
+                <span class="par-hole-num">${i+1}</span>
+                <input class="par-input" type="number" min="3" max="6" value="${p}" data-action="setPar" data-idx="${i}" />
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <div class="par-grid">
+            ${state.pars.map((p,i)=>`
+              <div class="par-cell">
+                <span class="par-hole-num">${i+1}</span>
+                <span class="par-val p${p}">${p}</span>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+      <div class="sec">
+        <div class="sec-label">Starting Hole</div>
+        <div class="hole-selector" style="margin-top:0">
+          ${Array.from({length:18},(_,i)=>{const h=i+1;return `<button class="hole-dot ${state.startingHole===h?'current':''}" data-action="setStartingHole" data-val="${h}">${h}</button>`;}).join('')}
+        </div>
+        ${state.startingHole > 1 ? `<p style="font-size:11px;color:var(--gold);margin-top:8px">Starting on hole ${state.startingHole} — foreclosure rules apply from hole 16 regardless</p>` : ''}
+      </div>
+      <button class="start-btn" data-action="startGame">TEE IT UP →</button>
+    </div>
+  </div>`;
+}
+
+// ── GAME ───────────────────────────────────────────────────────────────────
+function renderGame() {
+  const players = ap();
+  const par = curPar();
+  const base = curBase();
+  const bi = state.bankerIdx;
+  const isForeclosure = state.currentHole >= FORECLOSURE_START;
+
+  return `
+  <div class="wrap">
+    <div class="navbar">
+      <button class="nav-home" data-action="goHome">⌂ Home</button>
+      <span class="nav-title">HOLE ${state.currentHole} / 18</span>
+      <button class="nav-back" data-action="toggleHoleNav">${state.showHoleNav ? '✕ Close' : '📋 Review'}</button>
+    </div>
+
+    ${state.showHoleNav ? `
+      <div class="review-panel">
+        <div class="review-header">
+          <span class="review-title">Hole Review</span>
+          <button class="review-close" data-action="toggleHoleNav">✕</button>
+        </div>
+
+        ${renderReviewPanel()}
+      </div>
+    ` : ''}
+
+    <div class="game-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="hole-num">HOLE ${state.currentHole}</span>
+        ${isForeclosure ? '<span class="forc-badge">FORECLOSURE</span>' : ''}
+      </div>
+      <div class="header-right">
+        <span class="par-label">PAR ${par} · SI ${state.si[state.currentHole-1]}</span>
+        <span class="bet-label">$${base}/hole</span>
+      </div>
+    </div>
+
+    <div class="totals-strip">
+      ${players.map((p,i)=>`
+        <div class="total-chip">
+          <span class="t-name">${p.name||'P'+(i+1)}</span>
+          <span class="t-amt ${state.totals[i]>=0?'pos':'neg'}">${fmt(state.totals[i])}</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="phase-box">
+      ${state.phase==='foreclosure-setup' ? renderForeclosureSetup(base) : ''}
+      ${state.phase==='pick-banker' ? renderPickBanker(players, isForeclosure) : ''}
+      ${state.phase==='betting' ? renderBetting(players, par, base, bi) : ''}
+      ${state.phase==='scores' ? renderScores(players, par, bi) : ''}
+      ${state.phase==='result' ? renderResult(players, par, base, bi) : ''}
+    </div>
+  </div>`;
+}
+
+function renderForeclosureSetup(base) {
+  const players = ap(); const order = forcOrder();
+  return `
+    <h3 class="phase-title">🚨 FORECLOSURE — Holes 16–18</h3>
+    <p class="phase-desc">Most-down player becomes Banker and sets the new bet amount.</p>
+    <div class="info-box">
+      ${order.map((item,rank)=>`
+        <div class="info-row">
+          <span style="color:${rank===0?'#f87171':'#ccc'}">${rank===0?'👑 ':''}${players[item.i]?.name||'P'+(item.i+1)}</span>
+          <span class="${item.t>=0?'pos':'neg'}">${fmt(item.t)}</span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="sec-label" style="margin-bottom:10px">Set New Bet Amount</div>
+    <div class="forc-bet-opts">
+      ${[state.baseBet, state.baseBet*2, state.baseBet*4].map(v=>`
+        <button class="pill-on" data-action="setForeclosureBet" data-val="${v}">$${v.toFixed(0)}</button>
+      `).join('')}
+    </div>`;
+}
+
+function renderPickBanker(players, isForeclosure) {
+  const order = forcOrder();
+  return `
+    <h3 class="phase-title">Who's the BANKER?</h3>
+    <p class="phase-desc">${
+      state.currentHole===1 ? 'Pick the starting Banker for Hole 1.' :
+      isForeclosure ? 'Most-down player has first right. They can pass.' :
+      'Lowest score / first in hole from the previous hole.'
+    }</p>
+    ${isForeclosure ? `
+      <div class="info-box">
+        ${order.map((item,rank)=>`
+          <div class="info-row">
+            <span style="color:${rank===0?'#f87171':'#ccc'}">${players[item.i]?.name||'P'+(item.i+1)}</span>
+            <span class="${item.t>=0?'pos':'neg'}">${fmt(item.t)}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+    <div class="banker-grid">
+      ${players.map((p,i)=>`
+        <button class="banker-btn" data-action="pickBanker" data-idx="${i}">${p.name||'Player '+(i+1)}</button>
+      `).join('')}
+    </div>`;
+}
+
+function renderBetting(players, par, base, bi) {
+  const preAmt = par===3 ? base*5 : base*4;
+  const postAmt = par===3 ? base*3 : base*2;
+  const preLabel = par===3 ? 'Pre-5×' : 'Pre-Quad';
+  const postLabel = par===3 ? 'Triple' : 'Double';
+  return `
+    <h3 class="phase-title">🏦 ${players[bi]?.name||'P'+(bi+1)} is BANKER</h3>
+    <div class="rule-note">
+      ${par===3 ? `Par 3 — Pre-5× ($${preAmt.toFixed(0)}) or Triple after ($${postAmt.toFixed(0)})` : `Par ${par} — Pre-Quad ($${preAmt.toFixed(0)}) or Double after ($${postAmt.toFixed(0)})`}
+    </div>
+    ${players.map((p,i) => {
+      if (i===bi) return '';
+      const b = state.bets[i];
+      return `
+        <div class="g-bet-row">
+          <span class="bet-name">${p.name||'P'+(i+1)}</span>
+          <button class="${b.type==='pre'?'bet-btn-on':'bet-btn'}" data-action="setBet" data-idx="${i}" data-type="pre">${preLabel}<br><small>$${preAmt.toFixed(0)}</small></button>
+          <button class="${b.type==='post'?'bet-btn-on':'bet-btn'}" data-action="setBet" data-idx="${i}" data-type="post">${postLabel}<br><small>$${postAmt.toFixed(0)}</small></button>
+          <button class="${b.type===null?'bet-btn-on':'bet-btn'}" data-action="setBet" data-idx="${i}" data-type="base">Base<br><small>$${base.toFixed(0)}</small></button>
+        </div>`;
+    }).join('')}
+    <div class="g-bet-row banker-row">
+      <span class="bet-name">🏦 Banker</span>
+      <button class="${state.bankerBet==='pre'?'bet-btn-on':'bet-btn'}" data-action="setBankerBet" data-type="pre">${preLabel}<br><small>$${preAmt.toFixed(0)}</small></button>
+      <button class="${state.bankerBet==='double'?'bet-btn-on':'bet-btn'}" data-action="setBankerBet" data-type="double">${par===3?'Triple all':'Double all'}<br><small>${par===3?'3×':'2×'}</small></button>
+      <button class="${state.bankerBet===null?'bet-btn-on':'bet-btn'}" data-action="setBankerBet" data-type="none">None<br><small>—</small></button>
+    </div>
+    <div class="preview">
+      ${players.map((p,i) => {
+        if (i===bi) return '';
+        const amt = base * pMult(i) * bMult();
+        return `<div class="preview-row"><span>${p.name||'P'+(i+1)} vs Banker</span><span class="preview-amt">$${amt.toFixed(0)} <span class="preview-note">+ birdie/eagle</span></span></div>`;
+      }).join('')}
+    </div>
+    <button class="action-btn" data-action="goToScores">ENTER SCORES →</button>`;
+}
+
+function renderScores(players, par, bi) {
+  return `
+    <h3 class="phase-title">${state.editingHole ? '&#9998; Edit Hole '+state.currentHole : 'Scores — Hole '+state.currentHole} (Par ${par})</h3>
+    ${state.editingHole ? '<div class="rule-note" style="background:rgba(212,175,55,0.12)">Editing hole '+state.currentHole+' — all other holes stay the same</div>' : ''}
+    ${players.map((p,i)=>{
+      const sc = parseInt(state.currentScores[i]) || par;
+      return `
+        <div class="stepper-row">
+          <span class="stepper-name">${i===bi?'🏦 ':''}${p.name||'P'+(i+1)}</span>
+          <div class="stepper-ctrl">
+            <button class="stepper-btn" data-action="stepScore" data-idx="${i}" data-dir="-1">−</button>
+            <div class="stepper-val">
+              <span class="stepper-num">${sc}</span>
+              <span class="stepper-label" style="color:${scoreColor(sc,par)}">${scoreLabel(sc,par)}</span>
+            </div>
+            <button class="stepper-btn" data-action="stepScore" data-idx="${i}" data-dir="1">+</button>
+          </div>
+        </div>`;
+    }).join('')}
+    <button class="action-btn" data-action="submitScores">CALCULATE →</button>`;
+}
+
+function renderResult(players, par, base, bi) {
+  const result = state.holeResult;
+  // When editing, use the stored par from holeResult
+  if (result && result.par) par = result.par;
+  return `
+    <h3 class="phase-title">Hole ${state.currentHole} Results</h3>
+    ${result.details.map(d => {
+      const p = players[d.playerIdx];
+      const winnerGross = d.playerWins ? d.pGross : d.bGross;
+      const wm = d.tie ? 1 : scoreMult(winnerGross, par);
+      return `
+        <div class="result-hole">
+          <div class="result-matchup">
+            <span>${p?.name||'P'+(d.playerIdx+1)} <strong>${d.pGross}</strong>${state.scoringMode==='net'&&d.pScore!==d.pGross?` <span style="color:#888">(net ${d.pScore})</span>`:''}</span>
+            <span class="vs">vs</span>
+            <span>🏦 ${players[bi]?.name} <strong>${d.bGross}</strong>${state.scoringMode==='net'&&d.bScore!==d.bGross?` <span style="color:#888">(net ${d.bScore})</span>`:''}</span>
+          </div>
+          <div class="result-bottom">
+            ${d.tie
+              ? `<span class="result-tied">TIED — $0</span>`
+              : `<span class="result-win" style="color:${d.playerWins?'#4ade80':'#f87171'}">${d.playerWins?`${p?.name} wins $${d.amount.toFixed(0)}`:`${p?.name} loses $${d.amount.toFixed(0)}`}</span>`
+            }
+            ${d.betType ? `<span class="tag">${d.betType==='pre'?(par===3?'PRE-5×':'PRE-QUAD'):(par===3?'TRIPLE':'DOUBLE')}</span>` : ''}
+            ${d.bankerBet ? `<span class="tag">BANKER ${d.bankerBet==='pre'?(par===3?'PRE-5×':'PRE-QUAD'):(par===3?'3×':'2×')}</span>` : ''}
+            ${wm>1 ? `<span class="tag tag-gold">${wm===3?'EAGLE 3×':'BIRDIE 2×'}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('')}
+    <div class="after-totals">
+      ${players.map((p,i)=>`
+        <div class="after-chip">
+          <span class="after-name">${p.name||'P'+(i+1)}</span>
+          <span class="after-amt ${state.totals[i]>=0?'pos':'neg'}">${fmt(state.totals[i])}</span>
+        </div>
+      `).join('')}
+    </div>
+    <button class="action-btn" data-action="nextHole">
+      ${state.currentHole>=TOTAL_HOLES ? 'FINAL RESULTS →' : `HOLE ${state.currentHole+1} →`}
+    </button>`;
+}
+
+// ── SUMMARY ────────────────────────────────────────────────────────────────
+function renderSummary() {
+  const players = ap();
+  const sorted = players.map((p,i)=>({...p,total:state.totals[i],i})).sort((a,b)=>b.total-a.total);
+  return `
+  <div class="wrap">
+    <div class="navbar">
+      <button class="nav-home" data-action="goHome">⌂</button>
+      <span class="nav-title">FINAL RESULTS</span>
+      <div style="width:60px"></div>
+    </div>
+    <div class="card">
+      <h2 class="summary-title">⛳ FINAL RESULTS</h2>
+      ${sorted.map((p,rank)=>`
+        <div class="summary-row" style="background:${rank===0?'rgba(212,175,55,0.15)':'rgba(255,255,255,0.04)'}">
+          <span class="summary-rank">${rank===0?'🏆':'#'+(rank+1)}</span>
+          <span class="summary-name">${p.name||'P'+(p.i+1)}</span>
+          <span class="summary-total ${p.total>=0?'pos':'neg'}">${fmt(p.total)}</span>
+        </div>
+      `).join('')}
+      <p class="scorecard-title">Scorecard</p>
+      <div class="scorecard-wrap">
+        <table>
+          <thead><tr>
+            <th>Hole</th><th>Par</th>
+            ${players.map((p,i)=>`<th>${p.name||'P'+(i+1)}</th>`).join('')}
+            <th>Bnkr</th>
+          </tr></thead>
+          <tbody>
+            ${state.holeScores.map(h=>`
+              <tr>
+                <td>${h.hole}</td><td>${state.pars[h.hole-1]}</td>
+                ${players.map((_,pi)=>`<td>${h.scores[pi]||'-'}</td>`).join('')}
+                <td>${players[h.bankerIdx]?.name||'P'+(h.bankerIdx+1)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <button class="start-btn" style="margin-top:24px" data-action="goHome">HOME</button>
+    </div>
+  </div>`;
+}
+
+// ── HISTORY DETAIL ─────────────────────────────────────────────────────────
+function renderHistoryDetail() {
+  const g = state.savedGames.find(x=>x.id===state.viewingGameId);
+  if (!g) return `<div class="wrap"><p style="color:var(--muted);padding:40px 0;text-align:center">Game not found.</p></div>`;
+  const players = g.players.slice(0, g.numPlayers);
+  const sorted = players.map((p,i)=>({...p,total:g.totals[i]||0,i})).sort((a,b)=>b.total-a.total);
+  return `
+  <div class="wrap">
+    <div class="navbar">
+      <button class="nav-home" data-action="goHome">⌂</button>
+      <span class="nav-title" style="font-size:14px">${g.course}</span>
+      <div style="width:60px"></div>
+    </div>
+    <div class="card">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">${fmtDate(g.date)}</p>
+
+      <div class="sec-label">Final Standings</div>
+      ${sorted.map((p,rank)=>`
+        <div class="summary-row" style="background:${rank===0?'rgba(212,175,55,0.15)':'rgba(255,255,255,0.04)'}">
+          <span class="summary-rank" style="font-size:18px">${rank===0?'🏆':'#'+(rank+1)}</span>
+          <span class="summary-name" style="font-size:15px">${p.name||'P'+(p.i+1)}</span>
+          <span class="summary-total ${p.total>=0?'pos':'neg'}" style="font-size:18px">${fmt(p.total)}</span>
+        </div>
+      `).join('')}
+
+      <p class="scorecard-title" style="margin-top:20px">Hole by Hole</p>
+      ${g.holeScores.map(h=>{
+        const banker = players[h.bankerIdx]?.name||'P'+(h.bankerIdx+1);
+        return `
+          <div class="history-hole-row">
+            <span class="history-hole-num">H${h.hole}</span>
+            <span class="history-banker">🏦${banker}</span>
+            <div class="history-deltas">
+              ${h.details.map(d=>{
+                const pName = players[d.playerIdx]?.name||'P'+(d.playerIdx+1);
+                return `<span class="${d.delta>0?'pos':d.delta<0?'neg':''}" style="font-size:12px">${pName} ${fmt(d.delta)}</span>`;
+              }).join('')}
+            </div>
+          </div>`;
+      }).join('')}
+
+      <p class="scorecard-title">Scorecard</p>
+      <div class="scorecard-wrap">
+        <table>
+          <thead><tr>
+            <th>Hole</th><th>Par</th>
+            ${players.map((p,i)=>`<th>${p.name||'P'+(i+1)}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${g.holeScores.map(h=>`
+              <tr>
+                <td>${h.hole}</td><td>${g.pars[h.hole-1]}</td>
+                ${players.map((_,pi)=>`<td>${h.scores[pi]||'-'}</td>`).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── EVENTS ─────────────────────────────────────────────────────────────────
+function renderReviewPanel() {
+  if (!state.holeScores.length) return '<p class="no-review-data">No holes played yet.</p>';
+  var pl = ap();
+  var played = state.holeScores.map(function(h){return h.hole;}).sort(function(a,b){return a-b;});
+  var rh = (state.reviewHole && played.indexOf(state.reviewHole)>=0) ? state.reviewHole : played[played.length-1];
+  var minH = played[0], maxH = played[played.length-1];
+  var pct = played.length > 1 ? ((rh - minH) / (maxH - minH)) * 100 : 100;
+  var hData = null;
+  for(var x=0;x<state.holeScores.length;x++){if(state.holeScores[x].hole===rh){hData=state.holeScores[x];break;}}
+  var html = '';
+
+  html += '<div class="hole-slider-wrap">';
+  html += '<button class="stepper-btn" style="width:40px;height:40px;font-size:20px" data-action="reviewStep" data-dir="-1">−</button>';
+  html += '<input type="range" class="hole-slider" min="'+minH+'" max="'+maxH+'" value="'+rh+'" data-action="reviewSlider" style="--pct:'+pct.toFixed(1)+'%">';
+  html += '<button class="stepper-btn" style="width:40px;height:40px;font-size:20px" data-action="reviewStep" data-dir="1">+</button>';
+  html += '<span class="slider-hole-num">H'+rh+'</span>';
+  html += '</div>';
+
+  if (hData) {
+    var bankerName = pl[hData.bankerIdx] ? (pl[hData.bankerIdx].name || ('P'+(hData.bankerIdx+1))) : '?';
+    html += '<div class="review-hole-card">';
+    html += '<div class="review-hole-meta">Hole '+hData.hole+' &middot; Par '+hData.par+' &middot; $'+hData.base+'/hole &middot; Banker: '+bankerName+'</div>';
+    hData.details.forEach(function(d) {
+      var p = pl[d.playerIdx];
+      var pName = p ? (p.name || ('P'+(d.playerIdx+1))) : '?';
+      var winnerGross = d.tie ? null : (d.playerWins ? d.pGross : d.bGross);
+      var wm = winnerGross !== null ? scoreMult(winnerGross, hData.par) : 1;
+      var cls = d.tie ? '' : (d.delta > 0 ? 'pos' : 'neg');
+      var amtText = d.tie ? 'TIED' : (d.delta > 0 ? (pName+' +$'+d.amount.toFixed(0)) : (pName+' -$'+d.amount.toFixed(0)));
+      html += '<div class="review-matchup"><span class="review-player">'+pName+' ('+d.pGross+') vs '+bankerName+' ('+d.bGross+')</span>';
+      html += '<div style="text-align:right"><div class="review-amount '+cls+'">'+amtText+'</div><div class="review-tags">';
+      if (d.betType) html += '<span class="tag">'+(d.betType==='pre'?(hData.par===3?'PRE-5x':'PRE-QUAD'):(hData.par===3?'TRIPLE':'DOUBLE'))+'</span>';
+      if (d.bankerBet) html += '<span class="tag">BANKER '+(d.bankerBet==='pre'?(hData.par===3?'PRE-5x':'PRE-QUAD'):(hData.par===3?'3x':'2x'))+'</span>';
+      if (wm > 1) html += '<span class="tag tag-gold">'+(wm===3?'EAGLE 3x':'BIRDIE 2x')+'</span>';
+      html += '</div></div></div>';
+    });
+    html += '<div class="review-totals">';
+    pl.forEach(function(p,i){
+      var t = hData.totalsAfter[i]||0;
+      html += '<div class="review-total-chip"><span class="review-total-name">'+(p.name||('P'+(i+1)))+'</span><span class="review-total-amt '+(t>=0?'pos':'neg')+'">'+fmt(t)+'</span></div>';
+    });
+    html += '</div></div>';
+  } else {
+    html += '<p class="no-review-data">No data for hole '+rh+'.</p>';
+  }
+
+  html += '<div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06)">';
+  html += '<div class="sec-label" style="margin-bottom:8px">Re-enter a hole to correct</div><div class="hole-selector">';
+  for (var i=1;i<=TOTAL_HOLES;i++){
+    var isPlayed=state.holeScores.some(function(h){return h.hole===i;});
+    var isCur=i===state.currentHole;
+    var cls2=isCur?'hole-dot current':(isPlayed?'hole-dot played':'hole-dot');
+    var dis=(!isPlayed&&!isCur)?'disabled style="opacity:0.3"':'';
+    html+='<button class="'+cls2+'" data-action="editHole" data-val="'+i+'" '+dis+'>'+i+'</button>';
+  }
+  html += '</div><p style="font-size:11px;color:#555;margin-top:8px">Gold = played &middot; Tap to re-enter</p></div>';
+  return html;
+}
+
+function bindEvents() {
+  document.querySelectorAll('[data-action]').forEach(el => {
+    el.addEventListener('click', handleAction);
+    el.addEventListener('input', handleInput);
+    el.addEventListener('change', handleAction);
+    el.addEventListener('keydown', e => {
+      if (e.key==='Enter' && e.target.dataset.action==='setCourseSearch') searchCourse();
+    });
+  });
+}
+
+function handleInput(e) {
+  const {action,idx} = e.target.dataset; const v = e.target.value;
+  if (action==='setPlayerName') { state.players[idx]={...state.players[idx],name:v}; }
+  else if (action==='setPlayerHcp') { state.players[idx]={...state.players[idx],handicap:parseInt(v)||0}; }
+  else if (action==='setBaseBetInput') { setState({baseBet:parseFloat(v)||5}); }
+  else if (action==='setPar') { const np=[...state.pars]; np[idx]=parseInt(v)||4; setState({pars:np}); }
+  else if (action==='setCourseSearch') {
+    state.courseSearch = v;
+    const btn = document.querySelector('[data-action="searchCourse"]');
+    if (btn) btn.disabled = !v.trim();
+  }
+  else if (action==='reviewSlider') {
+    const val = parseInt(v);
+    const played = state.holeScores.map(h=>h.hole);
+    if (!played.length) return;
+    const mn = Math.min(...played), mx = Math.max(...played);
+    const pct = played.length > 1 ? ((val - mn) / (mx - mn)) * 100 : 100;
+    e.target.style.setProperty('--pct', pct.toFixed(1) + '%');
+    state.reviewHole = val;
+    render();
+  }
+}
+
+function handleAction(e) {
+  // Allow 'change' events for range slider, block other non-click non-change events
+  if (e.type !== 'click' && e.type !== 'change') return;
+  const {action,val,idx,type,id,dir} = e.currentTarget.dataset;
+  // Slider change is handled in handleInput - skip here
+  if (e.type === 'change' && action === 'reviewSlider') return;
+
+  if (action==='goHome') setState({screen:'home'});
+  else if (action==='goSetup') setState({screen:'setup'});
+  else if (action==='setNumPlayers') setState({numPlayers:parseInt(val)});
+  else if (action==='setBaseBet') setState({baseBet:parseFloat(val)});
+  else if (action==='setScoringMode') setState({scoringMode:val});
+  else if (action==='toggleEditPars') setState({editPars:!state.editPars});
+  else if (action==='clearCourse') setState({selectedCourse:null,pars:[...DEFAULT_PARS],si:[...DEFAULT_SI]});
+  else if (action==='searchCourse') searchCourse();
+  else if (action==='loadCourse') loadCourse(id);
+  else if (action==='startGame') startGame();
+  else if (action==='toggleHoleNav') setState({showHoleNav:!state.showHoleNav, reviewHole: state.holeScores[state.holeScores.length-1]?.hole || 1});
+  else if (action==='reviewStep') {
+    const played = state.holeScores.map(h=>h.hole).sort((a,b)=>a-b);
+    if (!played.length) return;
+    const cur = state.reviewHole || played[played.length-1];
+    const curIdx = played.indexOf(cur);
+    const newIdx = Math.max(0, Math.min(played.length-1, curIdx + parseInt(dir)));
+    state.reviewHole = played[newIdx]; render();
+  }
+  else if (action==='goToHole') goToHole(parseInt(val));
+  else if (action==='editHole') editHole(parseInt(val));
+  else if (action==='setForeclosureBet') {
+    state.foreclosureBet=parseFloat(val); state.phase='pick-banker'; state.bankerIdx=null; render();
+  }
+  else if (action==='pickBanker') { state.bankerIdx=parseInt(idx); state.phase='betting'; render(); }
+  else if (action==='setBet') {
+    const b=[...state.bets]; b[idx]={type: type==='base'?null:(b[idx].type===type?null:type)}; state.bets=b; render();
+  }
+  else if (action==='setBankerBet') {
+    state.bankerBet = type==='none'?null:(state.bankerBet===type?null:type); render();
+  }
+  else if (action==='goToScores') { state.phase='scores'; render(); }
+  else if (action==='stepScore') {
+    const ns=[...state.currentScores];
+    const cur=parseInt(ns[idx])||curPar();
+    ns[idx]=String(Math.max(1,Math.min(12,cur+parseInt(dir))));
+    state.currentScores=ns; render();
+  }
+  else if (action==='submitScores') submitScores();
+  else if (action==='nextHole') nextHole();
+  else if (action==='resumeGame') {
+    const g = state.savedGames.find(x=>x.id===id);
+    if (!g) return;
+    // Restore game state
+    state.screen='game'; state.phase='pick-banker';
+    state.activeGameId=g.id;
+    state.players=g.players.map(p=>({...p}));
+    state.numPlayers=g.numPlayers;
+    state.pars=[...g.pars];
+    state.holeScores=[...g.holeScores];
+    state.totals=[...g.totals];
+    const lastHole = g.holeScores.length;
+    state.currentHole = Math.min(lastHole+1, TOTAL_HOLES);
+    state.foreclosureSetup = lastHole >= FORECLOSURE_START;
+    state.foreclosureBet = g.holeScores.find(h=>h.hole>=FORECLOSURE_START)?.base||null;
+    state.bankerIdx=null; state.holeResult=null; state.showHoleNav=false;
+    const p=String(state.pars[state.currentHole-1]||4);
+    state.currentScores=[p,p,p,p,p];
+    state.bets=[{type:null},{type:null},{type:null},{type:null},{type:null}];
+    state.bankerBet=null;
+    render();
+  }
+  else if (action==='viewHistory') {
+    setState({screen:'history-detail', viewingGameId:id});
+  }
+}
+
+render();
+</script>
+</body>
+</html>
